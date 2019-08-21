@@ -1,5 +1,5 @@
-from sklearn.feature_selection import SelectKBest, chi2
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.feature_selection import RFE
+from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import roc_auc_score
 from datetime import datetime
 import pandas as pd
@@ -17,7 +17,7 @@ from cms_modules.utils import (
 from cms_modules.logging import Logger
 
 logger = Logger()
-logger.log_message('Executing Chi-Squared Feature Selection with Random Forest Learner')
+logger.log_message('Executing Logistic Regression Wrapper-Based Feature Selection Experiment')
 
 data_path = os.environ['CMS_PARTB_PATH']
 partB_train_normalized_key = 'partB_train_normalized'
@@ -30,7 +30,6 @@ header = 'index,subset_size,minority_size,run,roc_auc,time_elapsed\n'
 with open(results_file, 'a') as outfile:
     outfile.write(header)
 
-tree_count = 100
 repetitions = 30
 ros_rate = 1
 minority_ratios = [0.2889, 0.0575, 0.0318, 0.0013, 0.0005, 0.0003, 0.0002]
@@ -48,12 +47,15 @@ for minority_ratio in minority_ratios:
         # iterate over 30 runs
         for run in range(repetitions):
             logger.log_message(f'Starting run {run}')
+            output = f'{counter},{subset_size},{minority_ratio},{run},'
 
             # take random sample from the training data
             train_data = pd.read_hdf(data_path, 'partB_train_normalized')
             test_data = pd.read_hdf(data_path, 'partB_test_normalized')
+
             logger.log_message('Data imbalance levels before sampling')
             logger.log_message(get_binary_imbalance_ratio(train_data['exclusion']))
+            logger.log_message('Size of train data = ' + str(len(train_data)))
 
             pos_train, neg_train = split_on_binary_attribute(train_data, attribute='exclusion', pos_label=1, neg_label=0)
             train_data = apply_ros_rus(pos_train, neg_train, ros_rate=ros_rate, rus_rate=minority_ratio)
@@ -63,31 +65,21 @@ for minority_ratio in minority_ratios:
             logger.log_message('Minority class ratio after sampling: ')
             logger.log_message(get_binary_imbalance_ratio(train_data['exclusion']))
 
-
             # separate features from labels
             train_y = train_data['exclusion']
             train_x = train_data.drop(columns=['exclusion'])
             test_y = test_data['exclusion']
             test_x = test_data.drop(columns=['exclusion'])
 
-            # create subset of features
-            feature_selector = SelectKBest(chi2, k=subset_size).fit(train_x, train_y)
-            train_x_subset = feature_selector.transform(train_x)
-            test_x_subset = feature_selector.transform(test_x)
-
-            mask = feature_selector.get_support()
-            features = train_x.columns[mask]
-            logger.log_message(f'Using features {features.values}')
-
             start = timeit.default_timer()
-            output = f'{counter},{subset_size},{minority_ratio},{run},'
+            lr_model = LogisticRegression(n_jobs=10)
+            rfe = RFE(estimator=lr_model, n_features_to_select=subset_size, step=5)
+            rfe.fit(train_x, train_y)
 
-            # train a random forest
-            rf_model = RandomForestClassifier(n_jobs=-1, n_estimators=tree_count)
-            rf_model.fit(train_x_subset, train_y)
+            logger.log_message(f'Using features {train_x.columns[rfe.support_].values}')
 
             # record performance
-            posteriors = rf_model.predict_proba(test_x_subset)
+            posteriors = rfe.predict_proba(test_x)
             roc_auc = roc_auc_score(test_y, posteriors[:, 1])
 
             # record results
