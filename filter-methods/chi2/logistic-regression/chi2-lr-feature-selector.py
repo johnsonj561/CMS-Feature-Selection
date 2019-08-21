@@ -19,7 +19,6 @@ from cms_modules.logging import Logger
 logger = Logger()
 logger.log_message('Executing Chi-Squared Feature Selection with Random Forest Learner')
 
-# data_path = os.environ['CMS_PARTB_PATH']
 data_path = os.environ['CMS_PARTB_PATH']
 partB_train_normalized_key = 'partB_train_normalized'
 partB_test_normalized_key = 'partB_test_normalized'
@@ -55,7 +54,7 @@ for minority_ratio in minority_ratios:
             test_data = pd.read_hdf(data_path, 'partB_test_normalized')
             logger.log_message('Data imbalance levels before sampling')
             logger.log_message(get_binary_imbalance_ratio(train_data['exclusion']))
-            
+
             pos_train, neg_train = split_on_binary_attribute(train_data, attribute='exclusion', pos_label=1, neg_label=0)
             train_data = apply_ros_rus(pos_train, neg_train, ros_rate=ros_rate, rus_rate=minority_ratio)
             del pos_train
