@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH -J cms_chi2_lf
+#SBATCH -J cms_chi2_rf
 #SBATCH -A jjohn273
 #SBATCH -e errors.%j.txt
 #SBATCH -o output.%j.txt
@@ -13,4 +13,4 @@ module load anaconda/anaconda3/5.0.1
 
 source activate jjohn273-tf.latest
 
-srun python ./chi2-fs-logistic-regression-classifier.py
+srun python ./chi2-rf-feature-selector.py

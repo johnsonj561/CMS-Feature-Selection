@@ -5,7 +5,6 @@
 #SBATCH -e errors.%j.txt
 #SBATCH -o output.%j.txt
 #SBATCH -p longq-bigdata7
-#SBATCH --exclusive
 #SBATCH --mail-user=jjohn273@fau.edu
 #SBATCH --mail-type=ALL
 

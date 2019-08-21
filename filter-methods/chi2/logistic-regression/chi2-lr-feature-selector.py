@@ -19,18 +19,13 @@ from cms_modules.logging import Logger
 logger = Logger()
 logger.log_message('Executing Chi-Squared Feature Selection with Random Forest Learner')
 
+# data_path = os.environ['CMS_PARTB_PATH']
 data_path = os.environ['CMS_PARTB_PATH']
 partB_train_normalized_key = 'partB_train_normalized'
 partB_test_normalized_key = 'partB_test_normalized'
 timestamp = datetime.now().strftime("%m.%d.%Y-%H:%M:%S")
 results_file = f'./results.{timestamp}.csv'
 
-train_data = pd.read_hdf(data_path, 'partB_train_normalized')
-test_data = pd.read_hdf(data_path, 'partB_test_normalized')
-
-logger.log_message('Data imbalance levels before sampling')
-logger.log_message(get_binary_imbalance_ratio(train_data['exclusion']))
-logger.log_message('Size of train data = ' + str(len(train_data)))
 
 # initialize results
 header = 'index,subset_size,minority_size,run,roc_auc,time_elapsed\n'
@@ -58,6 +53,9 @@ for minority_ratio in minority_ratios:
             # take random sample from the training data
             train_data = pd.read_hdf(data_path, 'partB_train_normalized')
             test_data = pd.read_hdf(data_path, 'partB_test_normalized')
+            logger.log_message('Data imbalance levels before sampling')
+            logger.log_message(get_binary_imbalance_ratio(train_data['exclusion']))
+            
             pos_train, neg_train = split_on_binary_attribute(train_data, attribute='exclusion', pos_label=1, neg_label=0)
             train_data = apply_ros_rus(pos_train, neg_train, ros_rate=ros_rate, rus_rate=minority_ratio)
             del pos_train
