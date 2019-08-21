@@ -1,5 +1,5 @@
 from sklearn.feature_selection import SelectKBest, chi2
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import roc_auc_score
 from datetime import datetime
 import pandas as pd
@@ -25,8 +25,8 @@ partB_test_normalized_key = 'partB_test_normalized'
 timestamp = datetime.now().strftime("%m.%d.%Y-%H:%M:%S")
 results_file = f'./results.{timestamp}.csv'
 
-train_data = pd.HDFStore(data_path).get('partB_train_normalized')
-test_data = pd.HDFStore(data_path).get('partB_test_normalized')
+train_data = pd.read_hdf(data_path, 'partB_train_normalized')
+test_data = pd.read_hdf(data_path, 'partB_test_normalized')
 
 logger.log_message('Data imbalance levels before sampling')
 logger.log_message(get_binary_imbalance_ratio(train_data['exclusion']))
@@ -37,7 +37,6 @@ header = 'index,subset_size,minority_size,run,roc_auc,time_elapsed\n'
 with open(results_file, 'a') as outfile:
     outfile.write(header)
 
-tree_count = 500
 repetitions = 30
 ros_rate = 1
 minority_ratios = [0.2889, 0.0575, 0.0318, 0.0013, 0.0005, 0.0003, 0.0002]
@@ -87,11 +86,11 @@ for minority_ratio in minority_ratios:
             output = f'{counter},{subset_size},{minority_ratio},{run},'
 
             # train a random forest
-            rf_model = RandomForestClassifier(n_jobs=-1, n_estimators=tree_count)
-            rf_model.fit(train_x_subset, train_y)
+            lr_model = LogisticRegression(n_jobs=10)
+            lr_model.fit(train_x_subset, train_y)
 
             # record performance
-            posteriors = rf_model.predict_proba(test_x_subset)
+            posteriors = lr_model.predict_proba(test_x_subset)
             roc_auc = roc_auc_score(test_y, posteriors[:, 1])
 
             # record results
